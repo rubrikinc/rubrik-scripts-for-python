@@ -5,3 +5,4 @@ venv
 .idea
 *.csv
 rubrik_host_registrations*
+DATAGEN*
