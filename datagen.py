@@ -7,16 +7,6 @@ from satori.rtm.client import make_client, SubscriptionMode
 counter = 0
 filename = 'DATAGEN'
 
-#Rotate file after 1GB
-<<<<<<< HEAD
-logger = logging.getLogger(filename)
-=======
-logger = logging.getLogger('logger')
->>>>>>> Initial Commit
-handler = logging.handlers.RotatingFileHandler(filename, maxBytes=1073741824)
-logger.addHandler(handler)
-
-
 
 channel = "world"
 endpoint = "wss://open-data.api.satori.com"
@@ -30,7 +20,7 @@ def main():
 
     # Rotate file after 1GB
     logger = logging.getLogger('logger')
-    handler = logging.handlers.RotatingFileHandler(filename, maxBytes=1073741824)
+    handler = logging.handlers.RotatingFileHandler(filename, maxBytes=1073741824, backupCount=700)
     logger.addHandler(handler)
 
 
@@ -62,10 +52,7 @@ def main():
 
             for message in mailbox:
                 print('Got message "{0}"'.format(message))
-<<<<<<< HEAD
                 logger.info(message)
-=======
->>>>>>> Initial Commit
 
 
 if __name__ == '__main__':
