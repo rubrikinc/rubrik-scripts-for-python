@@ -8,7 +8,7 @@ counter = 0
 filename = 'DATAGEN'
 
 #Rotate file after 1GB
-logger = logging.getLogger('logger')
+logger = logging.getLogger(filename)
 handler = logging.handlers.RotatingFileHandler(filename, maxBytes=1073741824)
 logger.addHandler(handler)
 
@@ -58,6 +58,7 @@ def main():
 
             for message in mailbox:
                 print('Got message "{0}"'.format(message))
+                logger.info(message)
 
 
 if __name__ == '__main__':
