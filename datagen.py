@@ -2,10 +2,14 @@ import logging
 import logging.handlers
 import sys
 import threading
+import os
 from satori.rtm.client import make_client, SubscriptionMode
 
+reload(sys)
+sys.setdefaultencoding("utf-8")
+
 counter = 0
-filename = 'DATAGEN'
+filename = '/home/largetext_1GB/DATAGEN_INSTANCE_' + str(sys.argv[1])
 
 
 channel = "world"
@@ -21,6 +25,7 @@ def main():
     # Rotate file after 1GB
     logger = logging.getLogger('logger')
     handler = logging.handlers.RotatingFileHandler(filename, maxBytes=1073741824, backupCount=700)
+    logger.setLevel(logging.INFO)
     logger.addHandler(handler)
 
 
@@ -51,9 +56,11 @@ def main():
                 sys.exit(1)
 
             for message in mailbox:
-                print('Got message "{0}"'.format(message))
-                logger.info(message)
-
+		try:
+                    print('Got message "{0}"'.format(message))
+                    logger.info(message)
+		except UnicodeDecodeError:
+		    continue
 
 if __name__ == '__main__':
     main()
