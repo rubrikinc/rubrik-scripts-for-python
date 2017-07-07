@@ -1,8 +1,13 @@
-import requests, json, sys
+
+import requests, json, sys, time, threading
+from getpass import getpass
 from requests.auth import HTTPBasicAuth
 
 
+lock = threading.Lock()
+
 class RubrikSession:
+
 
     class RubrikException(Exception):
 
@@ -18,7 +23,6 @@ class RubrikSession:
         #Prompt for configuration info
         self.mgmt_ip = mgmt_ip
         self.baseurl = "https://" + self.mgmt_ip + "/api/v1/"
-        self.internal_baseurl = "https://" + self.mgmt_ip + "/api/internal/"
         self.user = user
         self.password = password
 
@@ -68,11 +72,6 @@ class RubrikSession:
         return response
 
 
-    def get_all_hosts(self):
-        all_hosts = self.get_call("host?primary_cluster_id=local")
-        return all_hosts
-
-
     def get_vm(self):
         uri = self.baseurl + 'vmware/vm'
         params = {'limit': 9999}
@@ -116,79 +115,83 @@ class RubrikSession:
         response = r.json()
         return response
 
-    def update_vmdk(self, vmdk_id, params):
-        uri = self.baseurl + 'vmware/vm/virtual_disk/' + vmdk_id
-        try:
-            data = params
-            r = requests.patch(uri, data=json.dumps(data), verify=False, headers=self.headers)
-            r.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            print e
-            response = r.json()
-            if response.has_key('message'):
-                print response['message']
-            raise self.RubrikException("GET VMDK failed: " + response['message'])
-        response = r.json()
-        return response
-
-    def get_call(self,call,params={},internal=False):
-        if internal:
-            uri = self.internal_baseurl + call
-        else:
-            uri = self.baseurl + call
-        try:
-            r = requests.get(uri, params=json.dumps(params), verify=False, headers=self.headers)
-            r.raise_for_status()
-        except requests.RequestException as e:
-            print e
-            raise self.RubrikException("GET call Failed: " + str(e))
-        except (requests.exceptions.HTTPError, requests.exceptions.RequestException) as e:
-            print e
-            response = r.json()
-            if response.has_key('message'):
-                print response['message']
-            raise self.RubrikException("Call Failed: " + response['message'])
-        response = r.json()
-        return response
-
-    def patch_call(self, call, data):
-        uri  = self.baseurl + call
-        try:
-            r = requests.patch(uri, data=data, verify=False, auth=self.auth)
-            r.raise_for_status()
-        except requests.RequestException as e:
-            print e
-            raise self.RubrikException("PATCH call failed: " + str(e))
-        except (requests.exceptions.HTTPError, requests.exceptions.RequestException) as e:
-            print r
-            response = r.json()
-            if response.has_key('message'):
-                print response['message']
-            raise self.RubrikException("Call Failed: " + response['message'])
-            sys.exit(1)
-
-    def post_call(self, call, data):
-        uri  = self.baseurl + call
-        try:
-            r = requests.post(uri, data=data, verify=False, auth=self.auth)
-            r.raise_for_status()
-        except requests.RequestException as e:
-            print e
-            raise self.RubrikException("POST Call Failed: " + str(e))
-        except (requests.exceptions.HTTPError, requests.exceptions.RequestException) as e:
-            print e
-            response = r.json()
-            if response.has_key('message'):
-                print response['message']
-            raise self.RubrikException("Call Failed: " + response['message'])
-            sys.exit(1)
-
-    def get_filesets_for_hostid(self, hostid, params):
-        fileset_response = self.get_call('fileset', params)
-        return fileset_response['data']
-
-    def get_per_vm_storage_list(self):
-        per_vm_storage = self.get_call('stats/per_vm_storage', params={}, internal=True)
-        return per_vm_storage['data']
+def write_to_file(text):
+    lock.acquire()
+    try:
+        with open('Rubrik_VMDK_Details.csv', 'a') as f:
+            f.write(text)
+    except IOError:
+        f.close()
+        "FATAL IO ERROR ADDING LINE FOR VMDK"
+        sys.exit(1)
+    lock.release()
 
 
+def add_rubrik_thread(mgmt_ip, user, password, vm_list):
+
+    rubrik = RubrikSession(mgmt_ip, user, password)
+
+    for vm in vm_list:
+        if vm['isRelic'] is False:
+            print "Processing VMDKs for " + vm['name']
+
+            #Construct Folder Path
+            folder_path = ""
+            for folder in vm['folderPath']:
+                folder_path += '/' + folder['name']
+
+            #Retrieve list of vmdk id's
+            vmdk_list = (rubrik.get_vm_details(vm['id'])).get('virtualDiskIds', 'No vmdk found')
+
+            #Retrieve vmdk details and write out line in csv
+            for vmdk_id in vmdk_list:
+                vmdk_details = rubrik.get_vmdk_details(vmdk_id)
+
+                #Attempt to write line to CSV File
+                write_to_file(vm['name'] + ',' + folder_path + ',' + vm['id'] + ',' + vmdk_details['fileName'] + ',' + str(vmdk_details['size']/(1024.0*1024.0)) + ',' + vm['effectiveSlaDomainName'] + ',' + vmdk_id + ',' + str(vmdk_details['excludeFromSnapshots']) + '\n')
+
+    print "\nIt took ", (time.time() - start) / 60, "minutes."
+
+
+if __name__ == '__main__':
+
+
+    rubriknodes = []
+    VMDK_DICT = []
+    start = time.time()
+    # Attempt to open CSV file for writing
+    try:
+        with open('Rubrik_VMDK_Details.csv', 'w+') as f:
+            f.write('VM NAME,VM FOLDER,VM ID,VMDK FILENAME,VMDK SIZE - MB,EFFECTIVE SLA DOMAIN,VMDK ID,EXCLUDE\n')
+    except IOError:
+        print "Error:  Can't seem to open file: rubrik_VMDK_Details.csv"
+        sys.exit(1)
+
+    #Ask Initial Questions
+    rubrik_user = raw_input("Enter in Rubrik user: ")
+    rubrik_password = getpass("Enter in Rubrik password: ")
+    nodecount = raw_input("Enter in number of concurrent nodes for execution: ")
+    nodecount = int(nodecount)
+
+    #Ask for IP of each node
+    for i in range (0, nodecount):
+        rubriknodes.append(raw_input("Enter in Rubrik Mgmt IP for Node " + str(i) + ": "))
+
+    #Instantiate Rubrik Session
+    rubrik = RubrikSession(rubriknodes[0], rubrik_user, rubrik_password)
+
+    #Retreive master list of VM's from Rubrik
+    VM_MASTER = rubrik.get_vm()
+
+    #Split up VM_MASTER into #nodecount pieces and repopulate parent of VM_MASTER
+    VM_MASTER = [VM_MASTER['data'][i:i+(len(VM_MASTER['data']) / nodecount)] for i in range(0, len(VM_MASTER['data']), len(VM_MASTER['data']) / nodecount)]
+
+    #Merge Last List if there is a non-divisible remainder
+    if len(VM_MASTER) > nodecount:
+        VM_MASTER[nodecount-1] = VM_MASTER[nodecount-1] + VM_MASTER[nodecount]
+        VM_MASTER.pop(nodecount)
+
+    #Kick off each thread for each sub list
+    for i in range(0, nodecount):
+        print "Kicking off List for Node " + str(i)
+        threading.Thread(target=add_rubrik_thread, kwargs={'mgmt_ip':rubriknodes[i], 'user':rubrik_user, 'password':rubrik_password, 'vm_list': VM_MASTER[i]}).start()
