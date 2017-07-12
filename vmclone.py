@@ -32,7 +32,7 @@ args_list = parser.parse_args()
 
 
 username = 'marcus.faust@rangers.lab'
-password = getpass("Enter in Rubrik password: ")
+password = getpass("Enter in vcenter password: ")
 vcenter_ip = 'visa-vcsa.rangers.lab'
 vcenter_port = '443'
 cluster_name = 'Visa-POC-Cluster'
