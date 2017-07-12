@@ -183,6 +183,27 @@ class RubrikSession:
             raise self.RubrikException("Call Failed: " + response['message'])
             sys.exit(1)
 
+    def delete_call(self,call,params={},internal=False):
+        if internal:
+            uri = self.internal_baseurl + call
+        else:
+            uri = self.baseurl + call
+        try:
+            r = requests.delete(uri, params=json.dumps(params), verify=False, headers=self.headers)
+            r.raise_for_status()
+        except requests.RequestException as e:
+            print e
+            raise self.RubrikException("DELETE call Failed: " + str(e))
+        except (requests.exceptions.HTTPError, requests.exceptions.RequestException) as e:
+            print e
+            response = r.json()
+            if response.has_key('message'):
+                print response['message']
+            raise self.RubrikException("Call Failed: " + response['message'])
+        response = r.json()
+        return response
+    
+
     def get_filesets_for_hostid(self, hostid, params):
         fileset_response = self.get_call('fileset', params)
         return fileset_response['data']
