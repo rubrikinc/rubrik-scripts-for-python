@@ -36,13 +36,13 @@ password = getpass("Enter in vcenter password: ")
 vcenter_ip = 'visa-vcsa.rangers.lab'
 vcenter_port = '443'
 cluster_name = 'Visa-POC-Cluster'
-folder_name = 'Windows-POC'
-template_name = 'win2012r2-template'
-customization_spec_name = 'Windows Server 2012R2'
+folder_name = 'TP1'
+template_name = 'Centos7-Throughput'
+customization_spec_name = 'Centos7-spec'
 host_name = args_list.host
 count = int(args_list.count)
 start = int(args_list.start)
-new_vm_prefix = 'win'
+new_vm_prefix = 'linTP'
 
 # This will connect us to vCenter
 s = SmartConnectNoSSL(host=vcenter_ip, user=username, pwd=password, port=vcenter_port)

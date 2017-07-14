@@ -167,8 +167,13 @@ class RubrikSession:
             raise self.RubrikException("Call Failed: " + response['message'])
             sys.exit(1)
 
-    def post_call(self, call, data):
+    def post_call(self, call, data, internal=False):
         uri  = self.baseurl + call
+        if internal:
+            uri = self.internal_baseurl + call
+        else:
+            uri = self.baseurl + call
+
         try:
             r = requests.post(uri, data=data, verify=False, auth=self.auth)
             r.raise_for_status()
@@ -200,9 +205,8 @@ class RubrikSession:
             if response.has_key('message'):
                 print response['message']
             raise self.RubrikException("Call Failed: " + response['message'])
-        response = r.json()
-        return response
-    
+
+
 
     def get_filesets_for_hostid(self, hostid, params):
         fileset_response = self.get_call('fileset', params)
