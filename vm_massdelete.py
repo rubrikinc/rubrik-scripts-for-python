@@ -50,7 +50,12 @@ folder = get_obj(content, [vim.Folder], folder_name)
 
 #Poweroff Each VM if On
 for vm in folder.childEntity:
-    print "Rebooting " + vm.name
-    vm.RebootGuest()
+    print "Powering Off " + vm.name
+    vm.PowerOff()
+
+#Deleting VM
+for vm in folder.childEntity:
+    print "Destroying VM " + vm.name
+    vm.Destroy()
 
 
