@@ -6,3 +6,4 @@ venv
 *.csv
 rubrik_host_registrations*
 DATAGEN*
+*.txt

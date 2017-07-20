@@ -73,9 +73,13 @@ class RubrikSession:
         return all_hosts
 
 
-    def get_vm(self):
+    def get_vm(self, vm_name=""):
         uri = self.baseurl + 'vmware/vm'
-        params = {'limit': 9999}
+
+        if vm_name is not None:
+            params = {'limit': 9999, 'name': vm_name}
+        else:
+            params = {'limit': 9999}
         try:
             r = requests.get(uri, params=params, verify=False, headers=self.headers)
             r.raise_for_status()
@@ -216,4 +220,11 @@ class RubrikSession:
         per_vm_storage = self.get_call('stats/per_vm_storage', params={}, internal=True)
         return per_vm_storage['data']
 
+    def get_envision_table(self, report_id, params={}):
+        table = self.get_call('report/' + report_id + '/table?limit=9999', params=json.dumps(params), internal=True)
+        return table
+
+    def take_snapshot(self, vm_id, params={}):
+        snapshot = self.post_call('vmware/vm/' + vm_id + '/snapshot', data=json.dumps(params))
+        return snapshot
 

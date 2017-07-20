@@ -13,7 +13,7 @@ if __name__ == '__main__':
     VMDK_DICT = []
     start = time.time()
     unprotect_list = []
-    dc_id = 'DataCenter:::a975506f-af8f-45ff-8d13-840e553fa836-datacenter-21'
+    dc_id = 'DataCenter:::56868272-f48d-47e0-b16b-0ee86214940f-datacenter-21'
     # Attempt to open CSV file for writing
     try:
         with open('Rubrik_VMDK_Details.csv', 'w+') as f:
