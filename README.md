@@ -1,8 +1,15 @@
-## Rubrik - Python Scripts
+## Rubrik Python Scripts
 
-### Description
+### Repository Description
 
-Python based scripts that utilize the Rubrik RESTful API to management the Rubrik Cloud Data Management Platform.
+Python based scripts that utilize the Rubrik RESTful API to manage the Rubrik Cloud Data Management Platform.
+
+### Script Description
+
+#### On-Demand Snapshots
+
+* [Create an On-Demand Snapshot for all Virtual Machines in a provided VMware Cluster](https://github.com/rubrik-devops/python-scripts/blob/master/On-Demand%20Snapshot/on_demand_snapshot_by_cluster.py)
+
 
 
 ### Created and Maintained by the Rubrik Ranger Team
