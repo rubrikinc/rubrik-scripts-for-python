@@ -13,7 +13,7 @@ USERNAME = "demo"
 PASSWORD = "rubrik"
 
 # List of Clusters
-CLUSTER_LIST = ['cluster01', 'cluster02]
+CLUSTER_LIST = ['cluster01', 'cluster02']
 ```
 
 Assumptions: This script was created with the goal of creating an On-Demand Backup of 1000's of Virtual Machines at once so a delay of 1 second was added between each backup job.
