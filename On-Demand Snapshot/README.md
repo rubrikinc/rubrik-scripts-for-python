@@ -6,7 +6,7 @@ Description: Create an On-Demand Snapshot for all Virtual Machines in a provided
 
 Example Usage (Line 149-155):
 
-```
+```python
 # Cluster IP Address and Credentials
 NODE_IP = "172.58.62.123"
 USERNAME = "demo"
