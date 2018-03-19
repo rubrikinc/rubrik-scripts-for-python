@@ -152,15 +152,15 @@ USERNAME = ""
 PASSWORD = ""
 
 # List of Clusters
-CLUSTER_LIST = []
+VMWARE_CLUSTER_LIST = []
 
 # Variable used to refresh the login token after 30 minutes
-REFRESH_TOKEN = None
+REFRESH_TOKEN = 0
 
 # Generate the Initial Login Token
 token = login_token(USERNAME, PASSWORD)
 
-for cluster in CLUSTER_LIST:
+for cluster in VMWARE_CLUSTER_LIST:
 
     vm_to_snapshot = get_vm_by_cluster(cluster, token)
 
