@@ -4,16 +4,27 @@
 
 Description: Create an On-Demand Snapshot for all Virtual Machines in a provided VMware Cluster.
 
-#### Example Usage (Line 149-155):
+#### Example Usage (Line 185-202):
 
 ```python
+######## User Provided Variables ########
+
+
 # Cluster IP Address and Credentials
-NODE_IP = "172.58.62.123"
+NODE_IP = "172.21.8.53"
 USERNAME = "demo"
-PASSWORD = "rubrik"
+PASSWORD = "rubrik123!"
+
+
+### Note: Only populate one of the following lists ###
 
 # List of Clusters
-VMWARE_CLUSTER_LIST = ['cluster01', 'cluster02']
+VMWARE_CLUSTER_LIST = [] # Ex. ['cluster01', 'cluster02']
+
+# List of SLA Domains
+SLA_DOMAIN_NAME_LIST = [] # Ex. ['Gold', 'Silver']
+
+######## End User Provided Variables ########
 ```
 
 #### Example Output
@@ -21,6 +32,9 @@ VMWARE_CLUSTER_LIST = ['cluster01', 'cluster02']
 The _Generic Rubrik API Functions_ (Line 26 to 113) are helper functions utilized in the _Script Specific Funtions_ (Line 114 to 113)  and do not require any modification.
 
 The `get_vm_by_cluster` function will connect to the Rubrik Cluster and utilize the `/vmware/vm` API endpoint to list all Virtual Machines in the Cluster. If the `clusterName` key matches one of the Clusters provided in the `VMWARE_CLUSTER_LIST` variable the fuction will create a dictionary key pair that includes the virtual machine `id` and the `effectiveSlaDomainId` which will then be passed into the `on_demand_snapshot` function.
+
+The `get_vm_by_sla_domain` function will connect to the Rubrik Cluster and utilize the `/sla_domain?name={}` API endpoint to get the SLA Domain ID for the provided SLA Domain Name and then use the `/vmware/vm` API endpoint to list all Virtual Machines in the Cluster. If the `effectiveSlaDomainId` key matches the SLA Domain ID retrived from the previous API call the fuction will create a dictionary key pair that includes the virtual machine `id` and the `effectiveSlaDomainId` which will then be passed into the `on_demand_snapshot` function.
+
 
 ```json
 "data": [
@@ -70,7 +84,7 @@ The `get_vm_by_cluster` function will connect to the Rubrik Cluster and utilize 
   ],
 ```
 
-The following shows the execution of the `get_vm_by_cluster` function which has been modified to show the variables pulled from the Rubrik Cluster. During a normal execution of the script this information will not be visable.
+The following shows the execution of the `get_vm_by_cluster` or `get_vm_by_sla_domain` function which has been modified to show the variables pulled from the Rubrik Cluster. During a normal execution of the script this information will not be visable.
 
 [![asciicast](https://asciinema.org/a/170937.png)](https://asciinema.org/a/170937)
 
