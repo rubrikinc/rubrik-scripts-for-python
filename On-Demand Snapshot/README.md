@@ -1,6 +1,6 @@
 ## On-Demand Snapshots
 
-### [on_demand_snapshot_by_cluster.py](https://github.com/rubrik-devops/python-scripts/blob/master/On-Demand%20Snapshot/on_demand_snapshot_by_cluster.py)
+### [on_demand_snapshot_by_cluster_or_sla.py](https://github.com/rubrik-devops/python-scripts/blob/master/On-Demand%20Snapshot/on_demand_snapshot_by_cluster_or_sla.py)
 
 Description: Create an On-Demand Snapshot for all Virtual Machines in a provided VMware Cluster.
 
