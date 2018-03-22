@@ -4,7 +4,7 @@
 # Title: on_demand_snapshot_by_cluster
 # Author: Drew Russell - Rubrik Ranger Team
 # Date: 03/14/2018
-# Python ver: 3.6.4
+# Python ver: 3.6.4, 2.7.6
 #
 # Description:
 #
@@ -188,7 +188,7 @@ def on_demand_snapshot(vm_id, sla_id, token):
 # Cluster IP Address and Credentials
 NODE_IP = ""
 USERNAME = ""
-PASSWORD = "!"
+PASSWORD = ""
 
 
 ### Note: Only populate one of the following lists ###
