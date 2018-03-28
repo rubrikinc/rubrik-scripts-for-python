@@ -12,6 +12,7 @@
 
 ######################################## User Provided Variables #################################
 
+
 # Cluster IP Address and Credentials
 NODE_IP = ""
 USERNAME = ""
@@ -30,7 +31,7 @@ SLA_DOMAIN_NAME_LIST = [] # Ex. ['Gold', 'Silver']
 
 ### Note: If SNAPSHOT_SLA_DOMAIN is not modified (i.e not None), we will use the SLA Domain currently
 ### assigned to the Virtual Machine
-SNAPSHOT_SLA_DOMAIN = None # Ex. 'Gold
+SNAPSHOT_SLA_DOMAIN_NAME = None # Ex. 'Gold
 
 
 ######################################## End User Provided Variables ##############################
@@ -246,8 +247,8 @@ elif bool(VMWARE_CLUSTER_LIST) == True:
 
         vm_to_snapshot = get_vm_by_cluster(cluster, token)
 
-        if bool(SNAPSHOT_SLA_DOMAIN) == True:
-            new_sla_domain_id = get_sla_domain_id(SNAPSHOT_SLA_DOMAIN, token)
+        if bool(SNAPSHOT_SLA_DOMAIN_NAME) == True:
+            new_sla_domain_id = get_sla_domain_id(SNAPSHOT_SLA_DOMAIN_NAME, token)
 
             for virtual_machine_id, sla_domain_id in vm_to_snapshot.items():
                 vm_to_snapshot[virtual_machine_id] = new_sla_domain_id
@@ -275,8 +276,8 @@ elif bool(SLA_DOMAIN_NAME_LIST) == True:
 
         vm_to_snapshot = get_vm_by_sla_domain(sla, token)
 
-        if bool(SNAPSHOT_SLA_DOMAIN) == True:
-            new_sla_domain_id = get_sla_domain_id(SNAPSHOT_SLA_DOMAIN, token)
+        if bool(SNAPSHOT_SLA_DOMAIN_NAME) == True:
+            new_sla_domain_id = get_sla_domain_id(SNAPSHOT_SLA_DOMAIN_NAME, token)
 
             for virtual_machine_id, sla_domain_id in vm_to_snapshot.items():
                 vm_to_snapshot[virtual_machine_id] = new_sla_domain_id

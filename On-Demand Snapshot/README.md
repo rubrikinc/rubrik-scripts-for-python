@@ -7,13 +7,12 @@ Description: Create an On-Demand Snapshot for all Virtual Machines in a provided
 #### Example Usage (Line 185-202):
 
 ```python
-######## User Provided Variables ########
-
+######################################## User Provided Variables #################################
 
 # Cluster IP Address and Credentials
-NODE_IP = "172.21.8.53"
-USERNAME = "demo"
-PASSWORD = "rubrik123!"
+NODE_IP = "172.45.23.65"
+USERNAME = "admin"
+PASSWORD = "rubrik123"
 
 
 ### Note: Only populate one of the following lists ###
@@ -24,7 +23,14 @@ VMWARE_CLUSTER_LIST = [] # Ex. ['cluster01', 'cluster02']
 # List of SLA Domains
 SLA_DOMAIN_NAME_LIST = [] # Ex. ['Gold', 'Silver']
 
-######## End User Provided Variables ########
+# On-Demand Snapshot SLA Domain
+
+### Note: If SNAPSHOT_SLA_DOMAIN is not modified (i.e not None), we will use the SLA Domain currently
+### assigned to the Virtual Machine
+SNAPSHOT_SLA_DOMAIN = None # Ex. 'Gold
+
+
+######################################## End User Provided Variables ##############################
 ```
 
 #### Example Output
