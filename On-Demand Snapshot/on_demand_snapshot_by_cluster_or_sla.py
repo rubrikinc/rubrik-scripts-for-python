@@ -10,6 +10,30 @@
 #
 # Create an On-Demand Snapshot for all Virtual Machines in a provided VMware Cluster or SLA Domain
 
+######################################## User Provided Variables #################################
+
+# Cluster IP Address and Credentials
+NODE_IP = ""
+USERNAME = ""
+PASSWORD = ""
+
+
+### Note: Only populate one of the following lists ###
+
+# List of Clusters
+VMWARE_CLUSTER_LIST = [] # Ex. ['cluster01', 'cluster02']
+
+# List of SLA Domains
+SLA_DOMAIN_NAME_LIST = [] # Ex. ['Gold', 'Silver']
+
+# On-Demand Snapshot SLA Domain
+
+### Note: If SNAPSHOT_SLA_DOMAIN is not modified (i.e not None), we will use the SLA Domain currently
+### assigned to the Virtual Machine
+SNAPSHOT_SLA_DOMAIN = None # Ex. 'Gold
+
+
+######################################## End User Provided Variables ##############################
 
 import base64
 import requests
@@ -174,6 +198,28 @@ def get_vm_by_sla_domain(sla_domain_name, token):
     return vm_sla
 
 
+def get_sla_domain_id(sla_domain_name, token):
+    """ """
+
+    sla_domain = rubrik_get('v1', '/sla_domain?name={}'.format(sla_domain_name), token)
+    response_data = sla_domain['data']
+
+    for result in response_data:
+        try:
+            if result['name'] == sla_domain_name:
+                sla_domain_id = result['id']
+        except:
+            continue
+
+    try:
+        sla_domain_id
+    except NameError:
+        print("Error: The Rubrik Cluster does not contain the {} SLA Domain".format(sla_domain_name))
+        sys.exit()
+
+    return sla_domain_id
+
+
 def on_demand_snapshot(vm_id, sla_id, token):
     """ Create a On Demand Snapshot """
     on_demand_snapshot_config = {}
@@ -182,24 +228,6 @@ def on_demand_snapshot(vm_id, sla_id, token):
 
     rubrik_post('v1', '/vmware/vm/{}/snapshot'.format(vm_id), on_demand_snapshot_config, token)
 
-######## User Provided Variables ########
-
-
-# Cluster IP Address and Credentials
-NODE_IP = ""
-USERNAME = ""
-PASSWORD = ""
-
-
-### Note: Only populate one of the following lists ###
-
-# List of Clusters
-VMWARE_CLUSTER_LIST = [] # Ex. ['cluster01', 'cluster02']
-
-# List of SLA Domains
-SLA_DOMAIN_NAME_LIST = [] # Ex. ['Gold', 'Silver']
-
-######## End User Provided Variables ########
 
 
 # Variable used to refresh the login token after 30 minutes
@@ -218,22 +246,28 @@ elif bool(VMWARE_CLUSTER_LIST) == True:
 
         vm_to_snapshot = get_vm_by_cluster(cluster, token)
 
-        for virtual_machine_id, sla_domain_id in vm_to_snapshot.items():
+        if bool(SNAPSHOT_SLA_DOMAIN) == True:
+            new_sla_domain_id = get_sla_domain_id(SNAPSHOT_SLA_DOMAIN, token)
 
-            # Crate a new API Token
-            if REFRESH_TOKEN == 0:
-                token = login_token(USERNAME, PASSWORD)
+            for virtual_machine_id, sla_domain_id in vm_to_snapshot.items():
+                vm_to_snapshot[virtual_machine_id] = new_sla_domain_id
 
-            on_demand_snapshot(virtual_machine_id, sla_domain_id, token)
+    for virtual_machine_id, sla_domain_id in vm_to_snapshot.items():
 
-            print('On-Demand Snapshot of {}'.format(virtual_machine_id))
+        # Crate a new API Token
+        if REFRESH_TOKEN == 0:
+            token = login_token(USERNAME, PASSWORD)
 
-            REFRESH_TOKEN += 1
-            time.sleep(1)
+        on_demand_snapshot(virtual_machine_id, sla_domain_id, token)
 
-            # After 25 minutes (4500 seconds) reset the Refresh Token
-            if REFRESH_TOKEN == 4500:
-                REFRESH_TOKEN = 0
+        print('On-Demand Snapshot of {}'.format(virtual_machine_id))
+
+        REFRESH_TOKEN += 1
+        time.sleep(1)
+
+        # After 25 minutes (4500 seconds) reset the Refresh Token
+        if REFRESH_TOKEN == 4500:
+            REFRESH_TOKEN = 0
 
 elif bool(SLA_DOMAIN_NAME_LIST) == True:
 
@@ -241,18 +275,25 @@ elif bool(SLA_DOMAIN_NAME_LIST) == True:
 
         vm_to_snapshot = get_vm_by_sla_domain(sla, token)
 
-        for virtual_machine_id, sla_domain_id in vm_to_snapshot.items():
+        if bool(SNAPSHOT_SLA_DOMAIN) == True:
+            new_sla_domain_id = get_sla_domain_id(SNAPSHOT_SLA_DOMAIN, token)
 
-            # Crate a new API Token
-            if REFRESH_TOKEN == 0:
-                token = login_token(USERNAME, PASSWORD)
+            for virtual_machine_id, sla_domain_id in vm_to_snapshot.items():
+                vm_to_snapshot[virtual_machine_id] = new_sla_domain_id
 
-            on_demand_snapshot(virtual_machine_id, sla_domain_id, token)
-            print('On-Demand Snapshot of {}'.format(virtual_machine_id))
+    for virtual_machine_id, sla_domain_id in vm_to_snapshot.items():
 
-            REFRESH_TOKEN += 1
-            # time.sleep(1)
+        # Crate a new API Token
+        if REFRESH_TOKEN == 0:
+            token = login_token(USERNAME, PASSWORD)
 
-            # After 25 minutes (4500 seconds) reset the Refresh Token
-            if REFRESH_TOKEN == 4500:
-                REFRESH_TOKEN = 0
+        on_demand_snapshot(virtual_machine_id, sla_domain_id, token)
+
+        print('On-Demand Snapshot of {}'.format(virtual_machine_id))
+
+        REFRESH_TOKEN += 1
+        time.sleep(1)
+
+        # After 25 minutes (4500 seconds) reset the Refresh Token
+        if REFRESH_TOKEN == 4500:
+            REFRESH_TOKEN = 0
