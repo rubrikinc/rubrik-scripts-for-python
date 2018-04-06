@@ -10,6 +10,11 @@ Python based scripts that utilize the Rubrik RESTful API to manage the Rubrik Cl
 
 * [Create an On-Demand Snapshot for all Virtual Machines in a provided VMware Cluster](https://github.com/rubrik-devops/python-scripts/blob/master/On-Demand%20Snapshot/on_demand_snapshot_by_cluster.py)
 
+##### Filesets
+
+* [Add file exclusions to fileset templates](https://github.com/rubrik-devops/python-scripts/blob/master/Fileset/add_exclusion_to_fileset.py)
+
+
 #### Created and Maintained by the Rubrik Ranger Team
 
 <p></p>
