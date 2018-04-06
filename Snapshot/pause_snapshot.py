@@ -4,7 +4,7 @@
 # Title: pause_snapshot
 # Author: Drew Russell - Rubrik Ranger Team
 # Date: 03/29/2018
-# Python ver: 3.6.4, 2.7.6
+# Python ver: 3.6.4
 #
 # Description:
 #
@@ -14,78 +14,60 @@
 
 
 # Cluster IP Address and Credentials
-NODE_IP = ""
+NODE_IP_LIST = []
 USERNAME = ""
 PASSWORD = ""
 
 # List of SLA Domains to Pause
-SLA_DOMAIN_NAME_LIST = [] # Ex. ['Gold', 'Silver']
+SLA_DOMAIN_NAME_LIST = []
 
 
 ######################################## End User Provided Variables ##############################
 
 import base64
+import asyncio
+from aiohttp import ClientSession
 import requests
 import json
+from random import randint
 import sys
-import time
-from requests.auth import HTTPBasicAuth
 import argparse
 
 
 # ignore certificate verification messages
 requests.packages.urllib3.disable_warnings()
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--action', choices=['pause', 'resume'], help='Pause or Resume all scheduled snapshots.')
+arguments = parser.parse_args()
 
 # Generic Rubrik API Functions
 
 
-def basic_auth_header(username, password):
+def basic_auth_header():
     """Takes a username and password and returns a value suitable for
     using as value of an Authorization header to do basic auth.
     """
-    return base64.b64encode(username + ':' + password)
+
+    credentials = '{}:{}'.format(USERNAME, PASSWORD)
+
+    # Encode the Username:Password as base64
+    authorization = base64.b64encode(credentials.encode())
+    # Convert to String for API Call
+    authorization = authorization.decode()
+
+    return authorization
 
 
-def login_token(username, password):
-    """ Generate a new API Token """
-
-    api_version = "v1"
-    api_endpoint = "/session"
-
-    request_url = "https://{}/api/{}{}".format(NODE_IP, api_version, api_endpoint)
-
-    data = {'username': username, 'password': password}
-
-    authentication = HTTPBasicAuth(username, password)
-
-    try:
-        api_request = requests.post(request_url, data=json.dumps(data), verify=False, auth=authentication)
-    except requests.exceptions.ConnectionError as connection_error:
-        print(connection_error)
-        sys.exit()
-    except requests.exceptions.HTTPError as http_error:
-        print(http_error)
-        sys.exit()
-
-    response_body = api_request.json()
-
-    if 'token' in response_body:
-        return response_body['token']
-    else:
-        print('The response body did not contain the expected token.\n')
-        print(response_body)
-
-
-def rubrik_get(api_version, api_endpoint, token):
+def rubrik_get(api_version, api_endpoint):
     """ Connect to a Rubrik Cluster and perform a GET operation """
 
     AUTHORIZATION_HEADER = {'Content-Type': 'application/json',
                             'Accept': 'application/json',
-                            'Authorization': 'Bearer ' + token
+                            'Authorization': 'Basic ' + basic_auth_header()
                             }
 
-    request_url = "https://{}/api/{}{}".format(NODE_IP, api_version, api_endpoint)
+    request_url = "https://{}/api/{}{}".format(NODE_IP_LIST[0], api_version, api_endpoint)
 
     try:
         api_request = requests.get(request_url, verify=False, headers=AUTHORIZATION_HEADER)
@@ -100,37 +82,42 @@ def rubrik_get(api_version, api_endpoint, token):
     return response_body
 
 
-def rubrik_patch(api_version, api_endpoint, config, token):
-    """ Connect to a Rubrik Cluster and perform a POST operation """
+async def pause_vm(url):
 
-    AUTHORIZATION_HEADER = {'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'Authorization': 'Bearer ' + token
-                            }
+    node_ip = url.strip('https://').split('/api', 1)[0]
+    vm_id = url.split('/vmware/vm/', 1)[-1]
 
-    config = json.dumps(config)
+    AUTHORIZATION_HEADER = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Basic ' + basic_auth_header()
+    }
 
-    request_url = "https://{}/api/{}{}".format(NODE_IP, api_version, api_endpoint)
+    data = {}
+    data['isVmPaused'] = ACTION
 
-    try:
-        api_request = requests.patch(request_url, data=config, verify=False, headers=AUTHORIZATION_HEADER)
-        # Raise an error if they request was not successful
-        api_request.raise_for_status()
-    except requests.exceptions.RequestException as error_message:
-        print(error_message)
-        sys.exit(1)
+    data = json.dumps(data)
 
-    response_body = api_request.json()
+    async with ClientSession() as session:
+        async with session.patch(url, data=data, headers=AUTHORIZATION_HEADER, verify_ssl=False) as response:
 
-    return response_body
+            response_body = await response.read()
+            try:
+                response_body = response_body.decode('utf8').replace("'", '"')
+                response_body = json.loads(response_body)
+                is_vm_paused = response_body['blackoutWindowStatus']['isSnappableBlackoutActive']
+                print(vm_id + ' pause state set to ' + str(is_vm_paused) + ' via Node ' + node_ip)
+            except:
+                if response_body['message'] == 'Cannot pause if already paused':
+                    print(vm_id + ' pause state set already set to ' + str(ACTION) + ' via Node ' + node_ip)
+                else:
+                    print(response_body)
 
-# Script Specific Function
 
-
-def get_vm_by_sla_domain(sla_domain_name, token):
+def get_vm_by_sla_domain(sla_domain_name):
     """ """
 
-    sla_domain = rubrik_get('v1', '/sla_domain?name={}'.format(sla_domain_name), token)
+    sla_domain = rubrik_get('v1', '/sla_domain?name={}'.format(sla_domain_name))
     response_data = sla_domain['data']
 
     for result in response_data:
@@ -146,76 +133,52 @@ def get_vm_by_sla_domain(sla_domain_name, token):
         print("Error: The Rubrik Cluster does not contain the {} SLA Domain".format(sla_domain_name))
         sys.exit()
 
-    current_vm = rubrik_get('v1', '/vmware/vm?is_relic=false', token)
+    current_vm = rubrik_get('v1', '/vmware/vm?is_relic=false')
     response_data = current_vm['data']
-
-    vm_id = []
 
     for result in response_data:
         try:
 
             if result['effectiveSlaDomainId'] == sla_domain_id:
-                vm_id.append(result['id'])
+                VM_ID_LIST.append(result['id'])
         except:
             continue
 
-    if bool(vm_id) is False:
-        print('\nUnable to locate any virtual machines assigned to the "{}" SLA Domain.\n'.format(sla_domain_name))
-
-    return vm_id
-
-
-def is_vm_paused(vm_id, action, token):
-
-    data = {}
-    data['isVmPaused'] = action
-
-    #print(data)
-
-    response_body = rubrik_patch('v1', '/vmware/vm/{}'.format(vm_id), data, token)
-
-    return response_body
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--action', choices=['pause', 'resume'], help='Pause or Resume all scheduled snapshots.')
-arguments = parser.parse_args()
-
 
 if arguments.action == 'pause':
-    action = True
+    ACTION = True
 elif arguments.action == 'resume':
-    action = False
+    ACTION = False
 else:
     print('Error: Please use the "--action" flag to specify either "pause" or "resume".')
     sys.exit()
 
+NUMBER_OF_NODES = (len(NODE_IP_LIST) - 1)
+VM_ID_LIST = []
+REQUEST_URL = []
 
-# Variable used to refresh the login token after 30 minutes
-REFRESH_TOKEN = 0
-
-# Generate the Initial Login Token
-token = login_token(USERNAME, PASSWORD)
-
-if bool(SLA_DOMAIN_NAME_LIST) == False:
-    print('Please add at lesat one SLA Domain Name to the SLA_DOMAIN_NAME_LIST variable on line 22.')
-    sys.exit()
-
-# Pause all VMs in the SLA Domain
+print('Getting VMs for SLA:\n')
 for sla in SLA_DOMAIN_NAME_LIST:
-    vm_id_list = get_vm_by_sla_domain(sla, token)
+    print('  - {}'.format(sla))
+    get_vm_by_sla_domain(sla)
 
-for vm_id in vm_id_list:
-    # Crate a new API Token
-    if REFRESH_TOKEN == 0:
-        token = login_token(USERNAME, PASSWORD)
+print('\nBuilding the API calls....')
+for vm_id in VM_ID_LIST:
+    api_endpoint = "/vmware/vm/{}".format(vm_id)
 
-    is_vm_paused(vm_id, action, token)
+    random_list_index = randint(0, NUMBER_OF_NODES)
 
-    print('Modified {}'.format(vm_id))
+    node_ip = NODE_IP_LIST[random_list_index]
 
-    REFRESH_TOKEN += 1
+    REQUEST_URL.append("https://{}/api/{}{}".format(node_ip, 'v1', api_endpoint))
 
-    # After 25 minutes (4500 seconds) reset the Refresh Token
-    if REFRESH_TOKEN == 4500:
-        REFRESH_TOKEN = 0
+
+tasks = []
+loop = asyncio.get_event_loop()
+for url in REQUEST_URL:
+    task = asyncio.ensure_future(pause_vm(url))
+    tasks.append(task)
+
+print('\nStarting the execution of the API calls....\n')
+loop.run_until_complete(asyncio.wait(tasks))
+print()
