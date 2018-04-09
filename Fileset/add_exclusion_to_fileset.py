@@ -14,7 +14,7 @@ requests.packages.urllib3.disable_warnings()
 username = "admin"
 password = "Rubrik123!"
 rubrik_ip = "rubrik.demo.com"
-excludes = ["*.mp3"]
+exclude_list = ["*.mp3"]
 fileset_type = "SMB"
 ## Should not need to modify anything beyond this point
 clusterUrl = "https://"+rubrik_ip+"/api/v1"
@@ -29,6 +29,7 @@ filesets = requests.get(fileseturl, headers= { 'Accept': 'application/json', 'Au
 filesets = filesets.json()
 # For each fileset template we will add the new file exclusion types, and patch it using the REST API
 for fileset in filesets['data']:
+    excludes = exclude_list
     filesetId = fileset['id']
     for exclude in fileset['excludes']:
         excludes.append(str(exclude))
