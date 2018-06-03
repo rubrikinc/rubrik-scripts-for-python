@@ -1,8 +1,16 @@
-import base64
-import requests
-import json
-import sys
-import time
+#!/usr/bin/env python
+# This script comes with no warranty use at your own risk
+#
+# Title: nutanix_assign_sla
+# Author: Drew Russell - Rubrik Ranger Team
+# Date: 06/03/2018
+# Python ver: 3.6.4
+#
+# Description:
+#
+# Refresh the Nutanix Cluster and assign an SLA Domain to an AHV VM
+
+######################################## User Provided Variables #################################
 
 NODE_IP = ''
 USERNAME = ''
@@ -10,6 +18,15 @@ PASSWORD = ''
 
 NUTANIX_VM_NAME = ''
 SLA_DOMAIN_NAME = ''
+
+######################################## End User Provided Variables ##############################
+
+
+import base64
+import requests
+import json
+import sys
+import time
 
 
 # ignore certificate verification messages
