@@ -2,7 +2,7 @@
 
 ### [nutanix_assign_sla.py](https://github.com/rubrik-devops/python-scripts/blob/master/Virtual%20Machine/nutanix_assign_sla.py)
 
-Description: Create an On-Demand Snapshot for all Virtual Machines in a provided VMware Cluster.
+Description: Refresh the Nutanix Cluster and assign an SLA Domain to an AHV VM
 
 #### Example Usage (Line 13-22):
 
