@@ -32,10 +32,13 @@ import json
 from random import randint
 import sys
 import argparse
+import urllib3
 
 
 # ignore certificate verification messages
 requests.packages.urllib3.disable_warnings()
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--action', choices=['pause', 'resume'], help='Pause or Resume all scheduled snapshots.')
@@ -107,16 +110,20 @@ async def pause_vm(url):
                 response_body = json.loads(response_body)
                 is_vm_paused = response_body['blackoutWindowStatus']['isSnappableBlackoutActive']
                 print(vm_id + ' pause state set to ' + str(is_vm_paused) + ' via Node ' + node_ip)
+                VM_MODIFIED.append(vm_id)
             except:
                 if response_body['message'] == 'Cannot pause if already paused':
                     print(vm_id + ' pause state set already set to ' + str(ACTION) + ' via Node ' + node_ip)
+                    VM_MODIFIED.append(vm_id)
+                elif response_body['message'] == 'Cannot resume if not paused':
+                    print(vm_id + ' pause state set already set to ' + str(ACTION) + ' via Node ' + node_ip)
+                    VM_MODIFIED.append(vm_id)
                 else:
                     print(response_body)
 
 
 def get_vm_by_sla_domain(sla_domain_name):
     """ """
-
     sla_domain = rubrik_get('v1', '/sla_domain?name={}'.format(sla_domain_name))
     response_data = sla_domain['data']
 
@@ -133,16 +140,11 @@ def get_vm_by_sla_domain(sla_domain_name):
         print("Error: The Rubrik Cluster does not contain the {} SLA Domain".format(sla_domain_name))
         sys.exit()
 
-    current_vm = rubrik_get('v1', '/vmware/vm?is_relic=false')
+    current_vm = rubrik_get('v1', '/vmware/vm?effective_sla_domain_id={}&is_relic=false'.format(sla_domain_id))
     response_data = current_vm['data']
 
     for result in response_data:
-        try:
-
-            if result['effectiveSlaDomainId'] == sla_domain_id:
-                VM_ID_LIST.append(result['id'])
-        except:
-            continue
+        VM_ID_LIST.append(result['id'])
 
 
 if arguments.action == 'pause':
@@ -156,11 +158,13 @@ else:
 NUMBER_OF_NODES = (len(NODE_IP_LIST) - 1)
 VM_ID_LIST = []
 REQUEST_URL = []
+VM_MODIFIED = []
 
 print('Getting VMs for SLA:\n')
 for sla in SLA_DOMAIN_NAME_LIST:
     print('  - {}'.format(sla))
     get_vm_by_sla_domain(sla)
+
 
 print('\nBuilding the API calls....')
 for vm_id in VM_ID_LIST:
@@ -182,3 +186,5 @@ for url in REQUEST_URL:
 print('\nStarting the execution of the API calls....\n')
 loop.run_until_complete(asyncio.wait(tasks))
 print()
+print('Total Number of VMs to Pause/Resume  : {}'.format(len(VM_ID_LIST)))
+print('Total Number of VMs Paused/Resumed   : {}'.format(len(VM_MODIFIED)))
