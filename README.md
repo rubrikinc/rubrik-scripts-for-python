@@ -14,6 +14,10 @@ Python based scripts that utilize the Rubrik RESTful API to manage the Rubrik Cl
 
 * [Add file exclusions to fileset templates](https://github.com/rubrik-devops/python-scripts/blob/master/Fileset/add_exclusion_to_fileset.py)
 
+##### SQL Server
+
+* [Protect SQL Server Database](https://github.com/rubrik-devops/python-scripts/blob/master/SQL%20Server/protect_sql_db.py)
+
 
 #### Created and Maintained by the Rubrik Ranger Team
 
