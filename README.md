@@ -23,6 +23,8 @@ Python based scripts that utilize the Rubrik RESTful API to manage the Rubrik Cl
 
 * [Protect SQL Server Database](https://github.com/rubrik-devops/python-scripts/blob/master/SQL%20Server/protect_sql_db.py)
 
+* [Protect all instances on a SQL Server Host](https://github.com/rubrik-devops/python-scripts/blob/master/SQL%20Server/protect_sql_host.py)
+
 #### Created and Maintained by the Rubrik Ranger Team
 
 <p></p>

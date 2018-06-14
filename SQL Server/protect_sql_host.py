@@ -7,10 +7,8 @@ requests.packages.urllib3.disable_warnings()
 rubrik_ip = 'rubrik.demo.com'
 rubrik_user = "admin"
 rubrik_pass = "Not@Pa55!"
-# define our SQL Server host/DB info
+# define our SQL Server host info
 sql_host = 'sqlhost01.demo.com'
-sql_instance = 'WINGTIPTOYS'
-sql_db_name = 'CustomerDB'
 sla_domain_name = 'Bronze'
 
 
@@ -18,10 +16,8 @@ def main():
     token = connectRubrik(rubrik_ip, rubrik_user, rubrik_pass)
     sla_domain_id = getRubrikSlaIdByName(sla_domain_name,rubrik_ip,token)
     host_id = getRubrikHostIdByName(sql_host,rubrik_ip,token)
-    instance_id = getRubrikSqlInstanceIdByName(host_id,sql_instance,rubrik_ip,token)
-    sql_db_id = getRubrikSqlDbIdByName(instance_id,sql_db_name,rubrik_ip,token)
-    protectRubrikSqlDb(sql_db_id,sla_domain_id,rubrik_ip,token)
-    print (sql_db_name + " running on " + sql_host + "/" + sql_instance + " added to the " + sla_domain_name + " SLA domain.")
+    protectRubrikSqlHost(host_id,sla_domain_id,rubrik_ip,token)
+    print ("All SQL instances running on " + sql_host + " added to the " + sla_domain_name + " SLA domain.")
     return 0
 
 def connectRubrik(rubrik_ip, rubrik_user, rubrik_pass):
@@ -45,25 +41,16 @@ def getRubrikHostIdByName(host_name,rubrik_ip,token):
             return host['id']
     return 0
 
-def getRubrikSqlInstanceIdByName(host_id,instance_name,rubrik_ip,token):
+def getAllRubrikSqlInstanceIdByHost(host_id,rubrik_ip,token):
     uri = 'https://'+rubrik_ip+'/api/v1/mssql/instance?primary_cluster_id=local&root_id='+host_id
     headers = {'Content-Type':'application/json', 'Authorization':token}
     r = requests.get(uri, headers=headers, verify=False)
     query_object = json.loads(r.text)
+    all_instance_ids = []
     for instance in query_object['data']:
-        if instance['name'] == instance_name:
-            return instance['id']
-    return 0
-
-def getRubrikSqlDbIdByName(instance_id,db_name,rubrik_ip,token):
-    uri = 'https://'+rubrik_ip+'/api/v1/mssql/db?primary_cluster_id=local&instance_id='+instance_id
-    headers = {'Content-Type':'application/json', 'Authorization':token}
-    r = requests.get(uri, headers=headers, verify=False)
-    query_object = json.loads(r.text)
-    for sqldb in query_object['data']:
-        if sqldb['name'] == db_name:
-            return sqldb['id']
-    return 0
+        print ("Found instance named " + instance['name'] + " // " + instance['id'])
+        all_instance_ids.append(instance['id'])
+    return all_instance_ids
 
 def getRubrikSlaIdByName(sla_domain_name,rubrik_ip,token):
     uri = 'https://'+rubrik_ip+'/api/v1/sla_domain?primary_cluster_id=local&name='+sla_domain_name
@@ -75,14 +62,18 @@ def getRubrikSlaIdByName(sla_domain_name,rubrik_ip,token):
             return sla_domain['id']
     return 0
 
-def protectRubrikSqlDb(sql_db_id,sla_domain_id,rubrik_ip,token):
-    uri = 'https://'+rubrik_ip+'/api/v1/mssql/db/'+sql_db_id
-    headers = {'Content-Type':'application/json', 'Authorization':token, 'Accept': 'application/json'}
-    payload = '{"configuredSlaDomainId": "'+str(sla_domain_id)+'"}'
-    r = requests.patch(uri, data=payload, headers=headers, verify=False)
-    if r.status_code != 200:
-        raise ValueError("Something went wrong adding the database to the given SLA domain")
+def protectRubrikSqlHost(host_id,sla_domain_id,rubrik_ip,token):
+    all_instance_ids = getAllRubrikSqlInstanceIdByHost(host_id,rubrik_ip,token)
+    for instance_id in all_instance_ids:
+        print("Protecting instance ID "+instance_id)
+        uri = 'https://'+rubrik_ip+'/api/v1/mssql/instance/'+instance_id
+        headers = {'Content-Type':'application/json', 'Authorization':token, 'Accept': 'application/json'}
+        payload = '{"configuredSlaDomainId": "'+str(sla_domain_id)+'"}'
+        r = requests.patch(uri, data=payload, headers=headers, verify=False)
+        if r.status_code != 200:
+            raise ValueError("Something went wrong adding the instance to the given SLA domain")
     return 0
+
 
 # Start program
 if __name__ == "__main__":
