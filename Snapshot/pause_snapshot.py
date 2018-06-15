@@ -209,9 +209,6 @@ for vm_id in VM_ID_LIST:
 
     REQUEST_URL.append("https://{}/api/{}{}".format(node_ip, 'v1', api_endpoint))
 
-
-del REQUEST_URL[:4995]
-
 print('\nExecuting the API calls.\n')
 loop = asyncio.get_event_loop()
 
