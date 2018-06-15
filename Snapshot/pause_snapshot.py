@@ -14,7 +14,7 @@
 
 
 # Cluster IP Address and Credentials
-NODE_IP_LIST = []
+NODE_IP_LIST = [] # Ex. ['10.255.2.198', '10.255.2.199']
 USERNAME = ""
 PASSWORD = ""
 
@@ -125,9 +125,11 @@ async def patch(url, session):
 
 async def bound_fetch(sem, url, session):
     # Getter function with semaphore.
-    async with sem:
-
-        await patch(url, session)
+    try:
+        async with sem:
+            await patch(url, session)
+    except Exception as error:
+        ERROR_LIST.append(str(error) + ' {}'.format(url))
 
 
 async def run():
@@ -208,6 +210,8 @@ for vm_id in VM_ID_LIST:
     REQUEST_URL.append("https://{}/api/{}{}".format(node_ip, 'v1', api_endpoint))
 
 
+del REQUEST_URL[:4995]
+
 print('\nExecuting the API calls.\n')
 loop = asyncio.get_event_loop()
 
@@ -220,4 +224,4 @@ if ERROR_LIST:
     for error in ERROR_LIST:
         print(error)
 
-print('\n********* Number of VMs Modified: {} *********'.format(len(REQUEST_URL)))
+print('\n********* Number of VMs Modified: {} *********'.format(len(VM_MODIFIED)))
