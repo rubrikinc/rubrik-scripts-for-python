@@ -14,28 +14,31 @@
 
 
 # Cluster IP Address and Credentials
-NODE_IP_LIST = []
+NODE_IP_LIST = [] # Ex. ['10.255.2.198', '10.255.2.199']
 USERNAME = ""
 PASSWORD = ""
 
 # List of SLA Domains to Pause
-SLA_DOMAIN_NAME_LIST = []
-
+SLA_DOMAIN_NAME_LIST = [] # Ex. ['Gold', 'Silver']
 
 ######################################## End User Provided Variables ##############################
 
+
 import base64
 import asyncio
-from aiohttp import ClientSession
+from aiohttp import ClientSession, TCPConnector
 import requests
 import json
 from random import randint
 import sys
 import argparse
+import urllib3
 
 
 # ignore certificate verification messages
 requests.packages.urllib3.disable_warnings()
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--action', choices=['pause', 'resume'], help='Pause or Resume all scheduled snapshots.')
@@ -82,7 +85,7 @@ def rubrik_get(api_version, api_endpoint):
     return response_body
 
 
-async def pause_vm(url):
+async def patch(url, session):
 
     node_ip = url.strip('https://').split('/api', 1)[0]
     vm_id = url.split('/vmware/vm/', 1)[-1]
@@ -98,25 +101,61 @@ async def pause_vm(url):
 
     data = json.dumps(data)
 
-    async with ClientSession() as session:
-        async with session.patch(url, data=data, headers=AUTHORIZATION_HEADER, verify_ssl=False) as response:
+    async with session.patch(url, data=data, headers=AUTHORIZATION_HEADER, verify_ssl=False) as response:
 
-            response_body = await response.read()
+        response_body = await response.read()
+        try:
+            response_body = response_body.decode('utf8').replace("'", '"')
+            response_body = json.loads(response_body)
+            is_vm_paused = response_body['blackoutWindowStatus']['isSnappableBlackoutActive']
+            print('Success: {} ({})'.format(vm_id, node_ip))
+            VM_MODIFIED.append(vm_id)
+
+        except:
             try:
-                response_body = response_body.decode('utf8').replace("'", '"')
-                response_body = json.loads(response_body)
-                is_vm_paused = response_body['blackoutWindowStatus']['isSnappableBlackoutActive']
-                print(vm_id + ' pause state set to ' + str(is_vm_paused) + ' via Node ' + node_ip)
-            except:
-                if response_body['message'] == 'Cannot pause if already paused':
-                    print(vm_id + ' pause state set already set to ' + str(ACTION) + ' via Node ' + node_ip)
+                if response_body['message'] == 'Cannot pause if already paused' or response_body['message'] == 'Cannot resume if not paused':
+                    print('Already configured: {} ({})'.format(vm_id, node_ip))
+                    VM_MODIFIED.append(vm_id)
                 else:
-                    print(response_body)
+                    ERROR_LIST.append('Unknown Error: {} ({}) {} '.format(vm_id, node_ip, str(response_body)))
+
+            except:
+                ERROR_LIST.append('Error: {} ({}) {}'.format(vm_id, node_ip, str(response_body)))
+
+
+async def bound_fetch(sem, url, session):
+    # Getter function with semaphore.
+    try:
+        async with sem:
+            await patch(url, session)
+    except Exception as error:
+        ERROR_LIST.append(str(error) + ' {}'.format(url))
+
+
+async def run():
+    tasks = []
+    # create instance of Semaphore
+    sem = asyncio.Semaphore(500)
+
+    # Create client session that will ensure we dont open new connection
+    # per each request.
+    try:
+        async with ClientSession() as session:
+            for url in REQUEST_URL:
+                # pass Semaphore and session to every GET request
+
+                task = asyncio.ensure_future(bound_fetch(sem, url, session))
+
+                tasks.append(task)
+
+            responses = asyncio.gather(*tasks)
+            await responses
+    except Exception as error:
+        ERROR_LIST.append(error)
 
 
 def get_vm_by_sla_domain(sla_domain_name):
     """ """
-
     sla_domain = rubrik_get('v1', '/sla_domain?name={}'.format(sla_domain_name))
     response_data = sla_domain['data']
 
@@ -133,16 +172,11 @@ def get_vm_by_sla_domain(sla_domain_name):
         print("Error: The Rubrik Cluster does not contain the {} SLA Domain".format(sla_domain_name))
         sys.exit()
 
-    current_vm = rubrik_get('v1', '/vmware/vm?is_relic=false')
+    current_vm = rubrik_get('v1', '/vmware/vm?effective_sla_domain_id={}&is_relic=false'.format(sla_domain_id))
     response_data = current_vm['data']
 
     for result in response_data:
-        try:
-
-            if result['effectiveSlaDomainId'] == sla_domain_id:
-                VM_ID_LIST.append(result['id'])
-        except:
-            continue
+        VM_ID_LIST.append(result['id'])
 
 
 if arguments.action == 'pause':
@@ -156,13 +190,16 @@ else:
 NUMBER_OF_NODES = (len(NODE_IP_LIST) - 1)
 VM_ID_LIST = []
 REQUEST_URL = []
+VM_MODIFIED = []
+ERROR_LIST = []
+
 
 print('Getting VMs for SLA:\n')
 for sla in SLA_DOMAIN_NAME_LIST:
     print('  - {}'.format(sla))
     get_vm_by_sla_domain(sla)
 
-print('\nBuilding the API calls....')
+print('\nBuilding the API calls.')
 for vm_id in VM_ID_LIST:
     api_endpoint = "/vmware/vm/{}".format(vm_id)
 
@@ -172,13 +209,16 @@ for vm_id in VM_ID_LIST:
 
     REQUEST_URL.append("https://{}/api/{}{}".format(node_ip, 'v1', api_endpoint))
 
-
-tasks = []
+print('\nExecuting the API calls.\n')
 loop = asyncio.get_event_loop()
-for url in REQUEST_URL:
-    task = asyncio.ensure_future(pause_vm(url))
-    tasks.append(task)
 
-print('\nStarting the execution of the API calls....\n')
-loop.run_until_complete(asyncio.wait(tasks))
-print()
+future = asyncio.ensure_future(run())
+loop.run_until_complete(future)
+
+
+if ERROR_LIST:
+    print('\n********* Errors *********\n')
+    for error in ERROR_LIST:
+        print(error)
+
+print('\n********* Number of VMs Modified: {} *********'.format(len(VM_MODIFIED)))
