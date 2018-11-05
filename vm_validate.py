@@ -1,4 +1,4 @@
-#!/c/Python28/python -u
+#!c://Users/peterm/AppData/Local/Programs/Python/Python37-32/python.exe -u
 
 from pyVmomi import vim
 from pyvim.connect import SmartConnect, Disconnect, SmartConnectNoSSL
