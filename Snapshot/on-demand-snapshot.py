@@ -8,6 +8,8 @@
 # Description:
 #
 # Using the Rubrk Python SDK, take an on-demand snapshot of a vSphere VM and then wait for its completion.
+# See https://rubrik.gitbook.io/rubrik-sdk-for-python/ for additional information on env variables used to Connect
+# to the Rubrik cluster.
 # Example Usage: python on-demand-snapshot.py --vm demo-vm
 
 import urllib3
