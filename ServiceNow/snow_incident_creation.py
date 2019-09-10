@@ -2,10 +2,10 @@
 
 # SNOW Automatic Incident Creation for 24 Hour Compliance
 #
-# Requirements: Python 2.7
+# Requirements: Python3
 #               rubrik_cdm module (pip install rubrik_cdm)
 #               servicenow module (pip install servicenow)
-#               Rubrik CDM 3.0+
+#               Rubrik CDM 5.0.2+
 #               Environment variables for RUBRIK_IP (IP of Rubrik node), RUBRIK_USER (Rubrik username), RUBRIK_PASS (Rubrik password)
 
 from servicenow import ServiceNow

@@ -2,17 +2,44 @@
 
 # Bulk On-Demand Snapshot for 24 Hour Compliance
 #
-# Requirements: Python 2.7
-#               rubrik_cdm module
-#               Rubrik CDM 3.0+
-#               Environment variables for RUBRIK_IP (IP of Rubrik node), RUBRIK_USER (Rubrik username), RUBRIK_PASS (Rubrik password)
+# Requirements: 
+#   Python3
+#   rubrik_cdm module
+#   Rubrik CDM 5.0.2+
+#   Environment variables for rubrik_cdm_node_ip (IP of Rubrik node), rubrik_cdm_username (Rubrik username), rubrik_cdm_password (Rubrik password)
 
 import rubrik_cdm
 import urllib3
+import time
+
 urllib3.disable_warnings()
 
-debug = 'false'
+def RequestStatus(ods_id, obj_type):
+    if(obj_type == 'Mssql'):
+        endpoint = ('/mssql/request/{}').format(ods_id)
+        status = rubrik.get('v1', endpoint)
+        return status
+    elif(obj_type == 'VmwareVirtualMachine'):
+        endpoint = ('/vmware/vm/request/{}').format(ods_id)
+        status = rubrik.get('v1',endpoint)
+        return status
+    elif(obj_type == 'WindowsVolumeGroup'):
+        endpoint = ('/vmware/vm/request/{}').format(ods_id)
+        status = rubrik.get('v1','/vmware/vm/request/'+ ods_id)
+        return status
+    elif(obj_type == 'WindowsFileset'):
+        endpoint = ('/fileset/request/{}').format(ods_id)
+        status = rubrik.get('v1', endpoint)
+        return status
 
+def waitForJob(ods_id, obj_type, job_status):
+        while job_status not in ['SUCCEEDED', 'FAILED']:
+            time.sleep(10)
+            job_status = RequestStatus(ods_id, obj_type)
+            print('Status of Job is: {}').format(job_status['status'])
+
+
+debug = 'false'
 rubrik = rubrik_cdm.Connect()
 
 table_payload = {
@@ -47,20 +74,32 @@ for event in events['dataGrid']:
         }
 
         if (object_type == 'Mssql'):
-
-            api_resp = rubrik.post('v1','/mssql/db/' + managed_id + '/snapshot',ods_payload)
+            
+            endpoint = ('/mssql/db/{}/snapshot').format(managed_id)
+            api_resp = rubrik.post('v1', endpoint, ods_payload)
+            status = RequestStatus(api_resp['id'],object_type)
+            waitForJob(status['id'], object_type, status['status'])
 
         elif (object_type == 'VmwareVirtualMachine'):
-
-            api_resp = rubrik.post('v1','/vmware/vm/' + managed_id + '/snapshot',ods_payload)
+            
+            endpoint=('/vmware/vm/{}/snapshot').format(managed_id)
+            api_resp = rubrik.post('v1', endpoint, ods_payload)
+            status = RequestStatus(api_resp['id'],object_type)
+            waitForJob(status['id'], object_type, status['status'])
 
         elif (object_type == 'WindowsVolumeGroup'):
 
-            api_resp = rubrik.post('internal','/volume_group/' + managed_id + '/snapshot',ods_payload)
+            endpoint=('/volume_group/{}/snapshot').format(managed_id)
+            api_resp = rubrik.post('internal', endpoint, ods_payload)
+            status = RequestStatus(api_resp['id'],object_type)
+            waitForJob(status['id'], object_type, status['status'])
 
         elif (object_type == 'WindowsFileset'):
 
-            api_resp = rubrik.post('v1','/fileset/' + managed_id + '/snapshot',ods_payload)
+            endpoint=('/fileset/{}/snapshot').format(managed_id)
+            api_resp = rubrik.post('v1', endpoint, ods_payload)
+            status = RequestStatus(api_resp['id'],object_type)
+            waitForJob(status['id'], object_type, status['status'])
         
         else:
             print('Unable to perform On-Demand Snapshot for Object Type: ' + object_type)
