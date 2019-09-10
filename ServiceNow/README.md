@@ -12,6 +12,12 @@ Both these scripts require the python rubrik_cdm module to be installed and envi
 
 The script called `snow_incident_creation.py` is intended to scan the new 24 hour compliance report at a set time, and automatically create an incident for each row item found where the status is 'Non-Compliance'.
 
+We need to specify credentials and the serviceNOW instance inside the connection string:
+
+```
+conn = Connection.Auth(username='admin', password='rubrik', instance='dev99999', api='JSONv2')
+```
+
 This is limited to 1000 items currently, this can be adjusted by changing the `limit` value inside the payload:
 
 ```
