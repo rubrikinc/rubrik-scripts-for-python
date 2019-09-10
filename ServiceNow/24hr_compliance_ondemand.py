@@ -18,22 +18,18 @@ def RequestStatus(ods_id, obj_type):
     if(obj_type == 'Mssql'):
         endpoint = ('/mssql/request/{}').format(ods_id)
         status = rubrik.get('v1', endpoint)
-        print(status)
         return status
     elif(obj_type == 'VmwareVirtualMachine'):
         endpoint = ('/vmware/vm/request/{}').format(ods_id)
         status = rubrik.get('v1',endpoint)
-        print(status)
         return status
     elif(obj_type == 'WindowsVolumeGroup'):
         endpoint = ('/vmware/vm/request/{}').format(ods_id)
         status = rubrik.get('v1','/vmware/vm/request/'+ ods_id)
-        print(status)
         return status
     elif(obj_type == 'WindowsFileset'):
         endpoint = ('/fileset/request/{}').format(ods_id)
         status = rubrik.get('v1', endpoint)
-        print(status)
         return status
 
 def waitForJob(ods_id, obj_type, job_status):
@@ -54,7 +50,7 @@ table_payload = {
         "requestFilters":{
             "compliance24HourStatus": "NonCompliance"
         },
-        "limit": 5
+        "limit": 1000
     }
 }
 
@@ -117,4 +113,3 @@ for event in events['dataGrid']:
 
 output_str = ('Script Completed - Started an On-Demand Snpashot for {} Out of Compliance Backups.').format(ctr)
 print(output_str)
-
