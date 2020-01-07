@@ -54,7 +54,7 @@ def ls(snap, path):
             if args.recursive and filemode == u'directory':
                 q.put([snap, newpath])
             else:
-                l.append(newpath)
+                l.append(newpath + ('/' if filemode == u'directory' else ''))
 
 ls(snap, lsdir)
 
