@@ -1,4 +1,11 @@
 #!/usr/bin/python
+#########################################################################
+# Description                                                           #
+# Uses the API to view what files and directories exist in a snapshot.  #
+# Can be performed recursively using the -r switch.                     #
+# Recursive directory lookups will be slow because each lookup requires #
+# its own API GET.                                                      #
+#########################################################################
 
 import argparse
 import rubrik_cdm
