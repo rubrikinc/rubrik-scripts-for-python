@@ -45,12 +45,14 @@ q = Queue.Queue()
 def worker():
     while True:
         i = q.get()
-        ls(i[0], i[1])
+        ls(i[0], i[1], i[2])
         q.task_done()
 
-def ls(snap, path):
-    params = {"snapshot_id":snap, "path":path}
+def ls(snap, path, offset):
+    params = {"snapshot_id":snap, "path":path, "offset":offset}
     response = r.get("internal", "/browse", authentication=True, params=params)
+    if response[u'hasMore']:
+        q.put([snap, path, (offset + 1000)])
     data = response[u'data']
     if len(data) == 0:
         l.append(path + '/')
@@ -59,11 +61,11 @@ def ls(snap, path):
             filemode = i[u'fileMode']
             newpath = path + ('' if path == '/' else '/') + i[u'filename']
             if args.recursive and filemode == u'directory':
-                q.put([snap, newpath])
+                q.put([snap, newpath, 0])
             else:
                 l.append(newpath + ('/' if filemode == u'directory' else ''))
 
-ls(snap, lsdir)
+ls(snap, lsdir, 0)
 
 for i in range(threads):
     t = threading.Thread(target=worker)
